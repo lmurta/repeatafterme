@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:getflutter/getflutter.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -13,7 +15,17 @@ class MyApp extends StatefulWidget {
   MyAppState createState() => MyAppState();
 }
 
+enum TtsState { playing, stopped }
+
 class MyAppState extends State<MyApp> {
+  FlutterTts flutterTts;
+  TtsState ttsState = TtsState.stopped;
+  String language = "en-US";
+  double volume = 0.5;
+  double pitch = 1.0;
+  double rate = 0.5;
+  String _newVoiceText;
+
   Icon iconWord = Icon(
     Icons.local_library,
     //size: 20.0,
@@ -32,9 +44,11 @@ class MyAppState extends State<MyApp> {
   TextField textFieldType = TextField(
     decoration: InputDecoration(
       border: OutlineInputBorder(),
+      isDense: true,
+      contentPadding: const EdgeInsets.all(3.0),
     ),
     autocorrect: false,
-    enableSuggestions: false, 
+    enableSuggestions: false,
     keyboardType: TextInputType.text,
     style: TextStyle(
         // color: Colors.red,
@@ -43,6 +57,44 @@ class MyAppState extends State<MyApp> {
   );
 
   @override
+  initState() {
+    super.initState();
+    initTts();
+  }
+  initTts() {
+    flutterTts = FlutterTts();
+
+    //_getLanguages();
+
+    flutterTts.setStartHandler(() {
+      setState(() {
+        print("playing"+ _newVoiceText);
+        ttsState = TtsState.playing;
+      });
+    });
+
+    flutterTts.setCompletionHandler(() {
+      setState(() {
+        print("Complete");
+        ttsState = TtsState.stopped;
+      });
+    });
+
+    flutterTts.setCancelHandler(() {
+      setState(() {
+        print("Cancel");
+        ttsState = TtsState.stopped;
+      });
+    });
+
+    flutterTts.setErrorHandler((msg) {
+      setState(() {
+        print("error: $msg");
+        ttsState = TtsState.stopped;
+      });
+    });
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -112,7 +164,11 @@ class MyAppState extends State<MyApp> {
                 ),
                 Expanded(
                   child: textFieldType,
-                  flex: 5,
+                  flex: 4,
+                ),
+                Expanded(
+                  child: Text(''),
+                  flex: 1,
                 ),
               ]),
             ],
@@ -122,10 +178,30 @@ class MyAppState extends State<MyApp> {
     );
   }
 
+  Future _speak() async {
+    //await flutterTts.setVolume(volume);
+    //await flutterTts.setSpeechRate(rate);
+    //await flutterTts.setPitch(pitch);
+
+    if (_newVoiceText != null) {
+      if (_newVoiceText.isNotEmpty) {
+        var result = await flutterTts.speak(_newVoiceText);
+        if (result == 1) setState(() => ttsState = TtsState.playing);
+      }
+    }
+  }
+
+  Future _stop() async {
+    var result = await flutterTts.stop();
+    if (result == 1) setState(() => ttsState = TtsState.stopped);
+  }
+
   void pageChanged(int index) {
-    print("index:" + index.toString());
+    //print("index:" + index.toString());
     setState(() {
       wordText = Text(imageData[index]['word'], style: textStyle);
     });
+    _newVoiceText = imageData[index]['word'];
+    _speak();
   }
 }
