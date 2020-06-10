@@ -34,7 +34,7 @@ class MyAppState extends State<MyApp> {
       border: OutlineInputBorder(),
     ),
     autocorrect: false,
-    enableSuggestions: false,
+    enableSuggestions: false, 
     keyboardType: TextInputType.text,
     style: TextStyle(
         // color: Colors.red,
