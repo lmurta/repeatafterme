@@ -7,8 +7,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_speech/flutter_speech.dart';
 
 void main() {
-  debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
-
+//  debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
   runApp(MaterialApp(
     home: MyApp(),
   ));
@@ -25,7 +24,7 @@ class MyAppState extends State<MyApp> {
   SpeechRecognition _speech;
   bool _speechRecognitionAvailable = false;
   bool _isListening = false;
-  String transcription = '';
+  //String wordListened ='';
   String _selectedlanguage = 'en-US';
   //String _selectedlanguage = 'it-IT';
 
@@ -182,7 +181,23 @@ class MyAppState extends State<MyApp> {
                 ),
                 Expanded(
                   child: wordListened,
-                  flex: 5,
+                  flex: 3,
+                ),
+                Expanded(
+                  child: IconButton(
+                    icon: Icon(Icons.play_arrow),
+                    onPressed: _speechRecognitionAvailable && !_isListening
+                        ? () => _listenStart()
+                        : null,
+                  ),
+                  flex: 1,
+                ),
+                Expanded(
+                  child: IconButton(
+                    icon: Icon(Icons.stop),
+                    onPressed: _isListening ? () => _listenStop() : null,
+                  ),
+                  flex: 1,
                 ),
               ]),
               Row(children: <Widget>[
@@ -227,40 +242,48 @@ class MyAppState extends State<MyApp> {
   }
 
   void pageChanged(int index) {
-    _speakStop();
+    _listenStop();
     //print("index:" + index.toString());
     setState(() {
       wordText = Text(imageData[index]['word'], style: textStyle);
     });
     _speakText = imageData[index]['word'];
     _speak();
-    new Future.delayed(const Duration(seconds : 5));
-
-    _speech.activate(_selectedlanguage).then((_) {
-        _speech.listen().then((result) {
-          print('_MyAppState.start => result $result');
-          setState(() {
-            wordListened = Text(result, style: textStyle);
-            //_isListening = result;
-          });
-        });
-    });
-
-
+    new Future.delayed(const Duration(seconds: 5));
+  }
+  void onRecognitionResult(String text) {
+    print('_MyAppState.onRecognitionResult... $text');
+    setState(() { 
+      wordListened = Text(text, style: textStyle);
+      });
   }
 
+  void _listenCancel() =>
+      _speech.cancel().then((_) => setState(() => _isListening = false));
+
+  void _listenStop() => _speech.stop().then((_) {
+        setState(() => _isListening = false);
+      });
+  void _listenStart() => _speech.activate(_selectedlanguage).then((_) {
+        return _speech.listen().then((result) {
+          print('_MyAppState.start => result $result');
+          setState(() {
+            _isListening = result;
+          });
+        });
+      });
   void onSpeechAvailability(bool result) =>
       setState(() => _speechRecognitionAvailable = result);
   void onRecognitionStarted() {
     setState(() => _isListening = true);
   }
-  void onRecognitionResult(String text) {
-    print('_MyAppState.onRecognitionResult... $text');
-    setState(() => transcription = text);
-  }
+
+
+
   void onRecognitionComplete(String text) {
     print('_MyAppState.onRecognitionComplete... $text');
     setState(() => _isListening = false);
   }
+
   void errorHandler() => activateSpeechRecognizer();
-}//end main class
+} //end main class
