@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:getflutter/getflutter.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter_speech/flutter_speech.dart';
 
 void main() {
+  debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+
   runApp(MaterialApp(
     home: MyApp(),
   ));
@@ -18,20 +22,27 @@ class MyApp extends StatefulWidget {
 enum TtsState { playing, stopped }
 
 class MyAppState extends State<MyApp> {
+  SpeechRecognition _speech;
+  bool _speechRecognitionAvailable = false;
+  bool _isListening = false;
+  String transcription = '';
+  String _selectedlanguage = 'en-US';
+  //String _selectedlanguage = 'it-IT';
+
   FlutterTts flutterTts;
   TtsState ttsState = TtsState.stopped;
-  String language = "en-US";
-  double volume = 0.5;
-  double pitch = 1.0;
-  double rate = 0.5;
-  String _newVoiceText;
+  //String language = "en_US";
+  double _speakVolume = 0.5;
+  double _speakPitch = 1.0;
+  double _speakRate = 0.5;
+  String _speakText;
 
   Icon iconWord = Icon(
     Icons.local_library,
     //size: 20.0,
   );
   Icon iconType = Icon(Icons.keyboard);
-  Icon iconSay = Icon(Icons.sms);
+  Icon iconSay = Icon(Icons.mic);
   var wordIndex = 0;
   var imageData = [];
   TextStyle textStyle = TextStyle(
@@ -40,6 +51,7 @@ class MyAppState extends State<MyApp> {
       //fontWeight: FontWeight.w500,
       fontFamily: "Roboto");
   Text wordText = Text("Repeat after me:");
+  Text wordListened = Text(". . . ");
 
   TextField textFieldType = TextField(
     decoration: InputDecoration(
@@ -60,29 +72,45 @@ class MyAppState extends State<MyApp> {
   initState() {
     super.initState();
     initTts();
+    activateSpeechRecognizer();
   }
+
+  // Platform messages are asynchronous, so we initialize in an async method.
+  void activateSpeechRecognizer() {
+    print('_MyAppState.activateSpeechRecognizer... ');
+    _speech = new SpeechRecognition();
+    _speech.setAvailabilityHandler(onSpeechAvailability);
+    _speech.setRecognitionStartedHandler(onRecognitionStarted);
+    _speech.setRecognitionResultHandler(onRecognitionResult);
+    _speech.setRecognitionCompleteHandler(onRecognitionComplete);
+    _speech.setErrorHandler(errorHandler);
+    _speech.activate(_selectedlanguage).then((res) {
+      setState(() => _speechRecognitionAvailable = res);
+    });
+  }
+
   initTts() {
     flutterTts = FlutterTts();
 
     //_getLanguages();
-
+    flutterTts.setLanguage(_selectedlanguage);
     flutterTts.setStartHandler(() {
       setState(() {
-        print("playing"+ _newVoiceText);
+        //print("playing"+ _speakText);
         ttsState = TtsState.playing;
       });
     });
 
     flutterTts.setCompletionHandler(() {
       setState(() {
-        print("Complete");
+        //print("Complete");
         ttsState = TtsState.stopped;
       });
     });
 
     flutterTts.setCancelHandler(() {
       setState(() {
-        print("Cancel");
+        //print("Cancel");
         ttsState = TtsState.stopped;
       });
     });
@@ -153,7 +181,7 @@ class MyAppState extends State<MyApp> {
                   flex: 2,
                 ),
                 Expanded(
-                  child: wordText,
+                  child: wordListened,
                   flex: 5,
                 ),
               ]),
@@ -179,29 +207,60 @@ class MyAppState extends State<MyApp> {
   }
 
   Future _speak() async {
-    //await flutterTts.setVolume(volume);
-    //await flutterTts.setSpeechRate(rate);
-    //await flutterTts.setPitch(pitch);
+    await flutterTts.setLanguage(_selectedlanguage);
 
-    if (_newVoiceText != null) {
-      if (_newVoiceText.isNotEmpty) {
-        var result = await flutterTts.speak(_newVoiceText);
+    await flutterTts.setVolume(_speakVolume);
+    await flutterTts.setSpeechRate(_speakRate);
+    await flutterTts.setPitch(_speakPitch);
+
+    if (_speakText != null) {
+      if (_speakText.isNotEmpty) {
+        var result = await flutterTts.speak(_speakText);
         if (result == 1) setState(() => ttsState = TtsState.playing);
       }
     }
   }
 
-  Future _stop() async {
+  Future _speakStop() async {
     var result = await flutterTts.stop();
     if (result == 1) setState(() => ttsState = TtsState.stopped);
   }
 
   void pageChanged(int index) {
+    _speakStop();
     //print("index:" + index.toString());
     setState(() {
       wordText = Text(imageData[index]['word'], style: textStyle);
     });
-    _newVoiceText = imageData[index]['word'];
+    _speakText = imageData[index]['word'];
     _speak();
+    new Future.delayed(const Duration(seconds : 5));
+
+    _speech.activate(_selectedlanguage).then((_) {
+        _speech.listen().then((result) {
+          print('_MyAppState.start => result $result');
+          setState(() {
+            wordListened = Text(result, style: textStyle);
+            //_isListening = result;
+          });
+        });
+    });
+
+
   }
-}
+
+  void onSpeechAvailability(bool result) =>
+      setState(() => _speechRecognitionAvailable = result);
+  void onRecognitionStarted() {
+    setState(() => _isListening = true);
+  }
+  void onRecognitionResult(String text) {
+    print('_MyAppState.onRecognitionResult... $text');
+    setState(() => transcription = text);
+  }
+  void onRecognitionComplete(String text) {
+    print('_MyAppState.onRecognitionComplete... $text');
+    setState(() => _isListening = false);
+  }
+  void errorHandler() => activateSpeechRecognizer();
+}//end main class
