@@ -1,0 +1,45 @@
+Row(
+                        //Row1
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.max,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            child: iconWord,
+                            flex: 2,
+                          ),
+                          Expanded(
+                            child: wordText,
+                            flex: 5,
+                          ),
+                        ]),
+                ),Row(
+                    //Row 2
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: iconSay,
+                        flex: 2,
+                      ),
+                      Expanded(
+                        child: wordText,
+                        flex: 5,
+                      ),
+                    ]),
+                ,Row(
+                    //Row 3
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: iconType,
+                        flex: 2,
+                      ),
+                      Expanded(
+                        child: textFieldType,
+                        flex: 5,
+                      ),
+                    ]),
